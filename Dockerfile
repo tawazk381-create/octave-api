@@ -9,15 +9,15 @@ RUN apt-get update && \
 # Set workdir
 WORKDIR /app
 
-# Copy dependencies first (better caching)
+# Copy dependencies first (for better build cache)
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the app
+# Copy all app files
 COPY . .
 
-# Expose port (Render will inject $PORT)
+# Expose Render's dynamic port
 EXPOSE 10000
 
-# Start Flask app with Gunicorn (bind to Render's $PORT)
-CMD ["gunicorn", "-b", "0.0.0.0:${PORT}", "api:app"]
+# Start Flask app with Gunicorn bound to $PORT
+CMD ["gunicorn", "-b", "0.0.0.0:${PORT}", "app:app"]
