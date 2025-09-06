@@ -1,23 +1,26 @@
-# Use official Python image
+# syntax=docker/dockerfile:1
+
 FROM python:3.10-slim
 
-# Install Octave
+# Install Octave (and clean apt cache)
 RUN apt-get update && \
-    apt-get install -y octave && \
+    apt-get install -y --no-install-recommends octave && \
     rm -rf /var/lib/apt/lists/*
 
-# Set workdir
 WORKDIR /app
 
-# Copy dependencies first (for better build cache)
+# Install Python deps
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy all app files
+# Copy app
 COPY . .
 
-# Expose Render's dynamic port
+# Helpful for logs
+ENV PYTHONUNBUFFERED=1
+
+# Render assigns a dynamic port via $PORT; EXPOSE is informational
 EXPOSE 10000
 
-# Start Flask app with Gunicorn bound to $PORT
-CMD ["gunicorn", "-b", "0.0.0.0:${PORT}", "app:app"]
+# IMPORTANT: run via a shell so $PORT expands at runtime
+CMD ["sh","-c","gunicorn -b 0.0.0.0:$PORT app:app"]
