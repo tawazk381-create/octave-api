@@ -2,25 +2,22 @@
 
 FROM python:3.10-slim
 
-# Install Octave (and clean apt cache)
+# Install Octave
 RUN apt-get update && \
     apt-get install -y --no-install-recommends octave && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Install Python deps
+# Install Python deps first (better caching)
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy app
+# Copy all app files
 COPY . .
 
-# Helpful for logs
-ENV PYTHONUNBUFFERED=1
-
-# Render assigns a dynamic port via $PORT; EXPOSE is informational
+# Render injects $PORT at runtime
 EXPOSE 10000
 
-# IMPORTANT: run via a shell so $PORT expands at runtime
-CMD ["sh","-c","gunicorn -b 0.0.0.0:$PORT app:app"]
+# Use Gunicorn, binding to $PORT
+CMD ["sh","-c","gunicorn -b 0.0.0.0:$PORT api:app"]
