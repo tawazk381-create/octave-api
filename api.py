@@ -4,10 +4,12 @@
 # - Accepts JSON payload with job_id, horizon_days, service_level, and items[]
 # - Loops through items and calculates EOQ, ROP, SS for each
 # - Returns {"results": [...]} for PHP service consumption
+# - Uses dynamic PORT for Render deployment
 
 from flask import Flask, request, jsonify
 import subprocess
 import math
+import os
 
 app = Flask(__name__)
 
@@ -38,7 +40,6 @@ def optimize():
 
     results = []
 
-    # If no items passed, return error
     if not isinstance(items, list) or len(items) == 0:
         return jsonify({"error": "No items provided"}), 400
 
@@ -52,20 +53,17 @@ def optimize():
             order_cost = float(item.get("order_cost", 50))
             safety_stock = float(item.get("safety_stock", 0))
 
-            # Calculate EOQ, ROP, SS
             try:
-                # Example: EOQ = sqrt((2 * D * S) / H)
-                # where H = holding cost = 0.2 * unit_cost (20% carrying cost assumption)
+                # EOQ = sqrt((2 * D * S) / H)
                 annual_demand = demand * 365
                 holding_cost = 0.2 * unit_cost if unit_cost > 0 else 1
                 eoq = math.sqrt((2 * annual_demand * order_cost) / holding_cost)
 
-                # Reorder point = demand * lead_time + safety_stock
+                # ROP = demand * lead_time + safety_stock
                 reorder_point = demand * lead_time + safety_stock
 
-                # Safety stock left as provided or a basic z-score approach
                 ss = safety_stock
-            except Exception as calc_err:
+            except Exception:
                 eoq = None
                 reorder_point = None
                 ss = None
@@ -84,4 +82,6 @@ def optimize():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    # Use PORT env var for Render, fallback to 5000 locally
+    port = int(os.getenv("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
